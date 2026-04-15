@@ -1,59 +1,38 @@
 {
-  "timestamp": "2026-04-15T18:48:30.348607",
-  "total_tests": 19,
-  "passed_tests": 19,
+  "timestamp": "2026-04-15T19:08:46.238964",
+  "total_tests": 11,
+  "passed_tests": 11,
   "failed_tests": 0,
   "success_rate": 100.0,
   "test_results": [
     {
-      "test": "User Registration",
+      "test": "Admin Login (FaceYouFace)",
       "success": true,
       "details": "",
       "response_data": {
-        "id": "user_41b4aa605c7a",
-        "email": "test_user_184812@test.com",
-        "name": "Test User",
+        "id": "user_f8727900d388",
+        "email": "admin@faceyouface.com",
+        "name": "Admin",
+        "role": "host",
+        "picture": null,
+        "created_at": "2026-04-15T19:00:35.512728+00:00"
+      }
+    },
+    {
+      "test": "Guest Registration",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "id": "user_d929a4c19814",
+        "email": "guest_eabf0cda@faceyouface.com",
+        "name": "Test Guest",
         "role": "guest",
         "picture": null,
-        "created_at": "2026-04-15T18:48:13.376309+00:00"
+        "created_at": "2026-04-15T19:08:37.443687+00:00"
       }
     },
     {
-      "test": "Admin Login",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "id": "user_e554fd4d1f4b",
-        "email": "admin@staybnb.com",
-        "name": "Admin",
-        "role": "host",
-        "picture": null,
-        "created_at": "2026-04-15T18:40:29.260412+00:00"
-      }
-    },
-    {
-      "test": "Get Current User",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "id": "user_e554fd4d1f4b",
-        "email": "admin@staybnb.com",
-        "name": "Admin",
-        "role": "host",
-        "picture": null,
-        "created_at": "2026-04-15T18:40:29.260412+00:00"
-      }
-    },
-    {
-      "test": "User Logout",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "message": "Logged out successfully"
-      }
-    },
-    {
-      "test": "Get All Properties",
+      "test": "Get Properties",
       "success": true,
       "details": "",
       "response_data": {
@@ -185,526 +164,118 @@
       }
     },
     {
-      "test": "Get Featured Properties",
+      "test": "Image Upload (Object Storage)",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "id": "694e6204-ef6d-4b73-82b5-5e4da885f61a",
+        "url": "/api/files/694e6204-ef6d-4b73-82b5-5e4da885f61a",
+        "path": "faceyouface/uploads/user_d929a4c19814/694e6204-ef6d-4b73-82b5-5e4da885f61a.png",
+        "filename": "test.png",
+        "size": 97
+      }
+    },
+    {
+      "test": "Get Conversations",
+      "success": true,
+      "details": "",
+      "response_data": []
+    },
+    {
+      "test": "Send Message",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "id": "msg_0111da6ddda2",
+        "conversation_id": "conv_9d11c8b418fa",
+        "sender_id": "user_34fbbd61a697",
+        "sender_name": "Test Recipient",
+        "sender_picture": null,
+        "recipient_id": "user_34fbbd61a697",
+        "content": "Hello! I'm interested in your property.",
+        "read": false,
+        "created_at": "2026-04-15T19:08:41.619123+00:00"
+      }
+    },
+    {
+      "test": "Unread Messages Count",
+      "success": true,
+      "details": "",
+      "response_data": {
+        "count": 1
+      }
+    },
+    {
+      "test": "Get Conversation Messages",
       "success": true,
       "details": "",
       "response_data": [
         {
-          "id": "prop_d2adb6111cec",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Luxury Mediterranean Villa",
-          "description": "Experience the ultimate getaway in this stunning Mediterranean villa with breathtaking sea views, private pool, and modern amenities.",
-          "property_type": "villa",
-          "price_per_night": 350.0,
-          "location": "Costa Brava",
-          "city": "Barcelona",
-          "country": "Spain",
-          "max_guests": 8,
-          "bedrooms": 4,
-          "bathrooms": 3,
-          "amenities": [
-            "wifi",
-            "pool",
-            "kitchen",
-            "parking",
-            "air_conditioning",
-            "sea_view"
-          ],
-          "images": [
-            "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png"
-          ],
-          "rating": 4.9,
-          "review_count": 128,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262156+00:00",
-          "updated_at": "2026-04-15T18:40:29.262160+00:00"
-        },
-        {
-          "id": "prop_4b72941ec186",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Tropical Beach Villa",
-          "description": "Wake up to the sound of waves in this luxurious beachfront villa. Direct beach access and stunning sunset views.",
-          "property_type": "villa",
-          "price_per_night": 420.0,
-          "location": "Beachfront",
-          "city": "Cancun",
-          "country": "Mexico",
-          "max_guests": 6,
-          "bedrooms": 3,
-          "bathrooms": 2,
-          "amenities": [
-            "wifi",
-            "pool",
-            "kitchen",
-            "beach_access",
-            "air_conditioning"
-          ],
-          "images": [
-            "https://images.unsplash.com/photo-1759372945658-1e9f56e751bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBiZWFjaCUyMHZpbGxhJTIwZXh0ZXJpb3J8ZW58MHx8fHwxNzc2Mjc2ODc3fDA&ixlib=rb-4.1.0&q=85"
-          ],
-          "rating": 4.9,
-          "review_count": 156,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262189+00:00",
-          "updated_at": "2026-04-15T18:40:29.262190+00:00"
-        },
-        {
-          "id": "prop_b0a37a95d641",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Scandinavian Treehouse Retreat",
-          "description": "Escape to nature in this unique treehouse nestled in the Swedish forest. Perfect for a romantic getaway or solo adventure.",
-          "property_type": "cabin",
-          "price_per_night": 180.0,
-          "location": "Dalarna Forest",
-          "city": "Stockholm",
-          "country": "Sweden",
-          "max_guests": 2,
-          "bedrooms": 1,
-          "bathrooms": 1,
-          "amenities": [
-            "wifi",
-            "heating",
-            "kitchen",
-            "nature_view"
-          ],
-          "images": [
-            "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/e9ec01df7337decb3638037102006498af09b6e1edce90d32529e9c8441077d4.png"
-          ],
-          "rating": 4.8,
-          "review_count": 95,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262172+00:00",
-          "updated_at": "2026-04-15T18:40:29.262175+00:00"
-        },
-        {
-          "id": "prop_65faf3805aea",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Modern Cozy Cabin",
-          "description": "A beautifully designed cabin with modern amenities surrounded by nature. Perfect for a peaceful retreat.",
-          "property_type": "cabin",
-          "price_per_night": 150.0,
-          "location": "Mountain View",
-          "city": "Denver",
-          "country": "USA",
-          "max_guests": 4,
-          "bedrooms": 2,
-          "bathrooms": 1,
-          "amenities": [
-            "wifi",
-            "fireplace",
-            "kitchen",
-            "parking",
-            "mountain_view"
-          ],
-          "images": [
-            "https://images.unsplash.com/photo-1768578927442-24a68408c0c7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBjb3p5JTIwY2FiaW4lMjBpbnRlcmlvciUyMGFyY2hpdGVjdHVyZXxlbnwwfHx8fDE3NzYyNzY4Nzd8MA&ixlib=rb-4.1.0&q=85"
-          ],
-          "rating": 4.7,
-          "review_count": 73,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262181+00:00",
-          "updated_at": "2026-04-15T18:40:29.262183+00:00"
+          "id": "msg_0111da6ddda2",
+          "conversation_id": "conv_9d11c8b418fa",
+          "sender_id": "user_34fbbd61a697",
+          "sender_name": "Test Recipient",
+          "sender_picture": null,
+          "recipient_id": "user_34fbbd61a697",
+          "content": "Hello! I'm interested in your property.",
+          "read": false,
+          "created_at": "2026-04-15T19:08:41.619123+00:00"
         }
       ]
     },
     {
-      "test": "Property Search with Filters",
+      "test": "Host Dashboard Stats",
       "success": true,
       "details": "",
       "response_data": {
-        "properties": [
-          {
-            "id": "prop_d2adb6111cec",
-            "host_id": "user_e554fd4d1f4b",
-            "host_name": "Admin",
-            "title": "Luxury Mediterranean Villa",
-            "description": "Experience the ultimate getaway in this stunning Mediterranean villa with breathtaking sea views, private pool, and modern amenities.",
-            "property_type": "villa",
-            "price_per_night": 350.0,
-            "location": "Costa Brava",
-            "city": "Barcelona",
-            "country": "Spain",
-            "max_guests": 8,
-            "bedrooms": 4,
-            "bathrooms": 3,
-            "amenities": [
-              "wifi",
-              "pool",
-              "kitchen",
-              "parking",
-              "air_conditioning",
-              "sea_view"
-            ],
-            "images": [
-              "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png"
-            ],
-            "rating": 4.9,
-            "review_count": 128,
-            "is_active": true,
-            "created_at": "2026-04-15T18:40:29.262156+00:00",
-            "updated_at": "2026-04-15T18:40:29.262160+00:00"
-          }
-        ],
-        "total": 1,
-        "page": 1,
-        "pages": 1
-      }
-    },
-    {
-      "test": "Get Specific Property",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "id": "prop_d2adb6111cec",
-        "host_id": "user_e554fd4d1f4b",
-        "host_name": "Admin",
-        "title": "Luxury Mediterranean Villa",
-        "description": "Experience the ultimate getaway in this stunning Mediterranean villa with breathtaking sea views, private pool, and modern amenities.",
-        "property_type": "villa",
-        "price_per_night": 350.0,
-        "location": "Costa Brava",
-        "city": "Barcelona",
-        "country": "Spain",
-        "max_guests": 8,
-        "bedrooms": 4,
-        "bathrooms": 3,
-        "amenities": [
-          "wifi",
-          "pool",
-          "kitchen",
-          "parking",
-          "air_conditioning",
-          "sea_view"
-        ],
-        "images": [
-          "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png"
-        ],
-        "rating": 4.9,
-        "review_count": 128,
-        "is_active": true,
-        "created_at": "2026-04-15T18:40:29.262156+00:00",
-        "updated_at": "2026-04-15T18:40:29.262160+00:00"
-      }
-    },
-    {
-      "test": "Get Property Availability",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "booked_dates": []
-      }
-    },
-    {
-      "test": "Create Booking",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "id": "book_d6b40fd27205",
-        "property_id": "prop_d2adb6111cec",
-        "property_title": "Luxury Mediterranean Villa",
-        "property_image": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png",
-        "guest_id": "user_e554fd4d1f4b",
-        "guest_name": "Admin",
-        "host_id": "user_e554fd4d1f4b",
-        "check_in": "2026-04-22T18:48:20.902306",
-        "check_out": "2026-04-25T18:48:20.902315",
-        "guests": 2,
-        "nights": 3,
-        "price_per_night": 350.0,
-        "subtotal": 1050.0,
-        "service_fee": 126.0,
-        "total": 1176.0,
-        "status": "pending",
-        "payment_status": "pending",
-        "payment_method": "stripe",
-        "created_at": "2026-04-15T18:48:21.132423+00:00"
-      }
-    },
-    {
-      "test": "Get User Bookings",
-      "success": true,
-      "details": "",
-      "response_data": [
-        {
-          "id": "book_d6b40fd27205",
-          "property_id": "prop_d2adb6111cec",
-          "property_title": "Luxury Mediterranean Villa",
-          "property_image": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png",
-          "guest_id": "user_e554fd4d1f4b",
-          "guest_name": "Admin",
-          "host_id": "user_e554fd4d1f4b",
-          "check_in": "2026-04-22T18:48:20.902306",
-          "check_out": "2026-04-25T18:48:20.902315",
-          "guests": 2,
-          "nights": 3,
-          "price_per_night": 350.0,
-          "subtotal": 1050.0,
-          "service_fee": 126.0,
-          "total": 1176.0,
-          "status": "pending",
-          "payment_status": "pending",
-          "payment_method": "stripe",
-          "created_at": "2026-04-15T18:48:21.132423+00:00"
-        }
-      ]
-    },
-    {
-      "test": "Get Specific Booking",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "id": "book_d6b40fd27205",
-        "property_id": "prop_d2adb6111cec",
-        "property_title": "Luxury Mediterranean Villa",
-        "property_image": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png",
-        "guest_id": "user_e554fd4d1f4b",
-        "guest_name": "Admin",
-        "host_id": "user_e554fd4d1f4b",
-        "check_in": "2026-04-22T18:48:20.902306",
-        "check_out": "2026-04-25T18:48:20.902315",
-        "guests": 2,
-        "nights": 3,
-        "price_per_night": 350.0,
-        "subtotal": 1050.0,
-        "service_fee": 126.0,
-        "total": 1176.0,
-        "status": "pending",
-        "payment_status": "pending",
-        "payment_method": "stripe",
-        "created_at": "2026-04-15T18:48:21.132423+00:00"
-      }
-    },
-    {
-      "test": "Get Host Properties",
-      "success": true,
-      "details": "",
-      "response_data": [
-        {
-          "id": "prop_d2adb6111cec",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Luxury Mediterranean Villa",
-          "description": "Experience the ultimate getaway in this stunning Mediterranean villa with breathtaking sea views, private pool, and modern amenities.",
-          "property_type": "villa",
-          "price_per_night": 350.0,
-          "location": "Costa Brava",
-          "city": "Barcelona",
-          "country": "Spain",
-          "max_guests": 8,
-          "bedrooms": 4,
-          "bathrooms": 3,
-          "amenities": [
-            "wifi",
-            "pool",
-            "kitchen",
-            "parking",
-            "air_conditioning",
-            "sea_view"
-          ],
-          "images": [
-            "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png"
-          ],
-          "rating": 4.9,
-          "review_count": 128,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262156+00:00",
-          "updated_at": "2026-04-15T18:40:29.262160+00:00"
-        },
-        {
-          "id": "prop_b0a37a95d641",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Scandinavian Treehouse Retreat",
-          "description": "Escape to nature in this unique treehouse nestled in the Swedish forest. Perfect for a romantic getaway or solo adventure.",
-          "property_type": "cabin",
-          "price_per_night": 180.0,
-          "location": "Dalarna Forest",
-          "city": "Stockholm",
-          "country": "Sweden",
-          "max_guests": 2,
-          "bedrooms": 1,
-          "bathrooms": 1,
-          "amenities": [
-            "wifi",
-            "heating",
-            "kitchen",
-            "nature_view"
-          ],
-          "images": [
-            "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/e9ec01df7337decb3638037102006498af09b6e1edce90d32529e9c8441077d4.png"
-          ],
-          "rating": 4.8,
-          "review_count": 95,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262172+00:00",
-          "updated_at": "2026-04-15T18:40:29.262175+00:00"
-        },
-        {
-          "id": "prop_65faf3805aea",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Modern Cozy Cabin",
-          "description": "A beautifully designed cabin with modern amenities surrounded by nature. Perfect for a peaceful retreat.",
-          "property_type": "cabin",
-          "price_per_night": 150.0,
-          "location": "Mountain View",
-          "city": "Denver",
-          "country": "USA",
-          "max_guests": 4,
-          "bedrooms": 2,
-          "bathrooms": 1,
-          "amenities": [
-            "wifi",
-            "fireplace",
-            "kitchen",
-            "parking",
-            "mountain_view"
-          ],
-          "images": [
-            "https://images.unsplash.com/photo-1768578927442-24a68408c0c7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBjb3p5JTIwY2FiaW4lMjBpbnRlcmlvciUyMGFyY2hpdGVjdHVyZXxlbnwwfHx8fDE3NzYyNzY4Nzd8MA&ixlib=rb-4.1.0&q=85"
-          ],
-          "rating": 4.7,
-          "review_count": 73,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262181+00:00",
-          "updated_at": "2026-04-15T18:40:29.262183+00:00"
-        },
-        {
-          "id": "prop_4b72941ec186",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Tropical Beach Villa",
-          "description": "Wake up to the sound of waves in this luxurious beachfront villa. Direct beach access and stunning sunset views.",
-          "property_type": "villa",
-          "price_per_night": 420.0,
-          "location": "Beachfront",
-          "city": "Cancun",
-          "country": "Mexico",
-          "max_guests": 6,
-          "bedrooms": 3,
-          "bathrooms": 2,
-          "amenities": [
-            "wifi",
-            "pool",
-            "kitchen",
-            "beach_access",
-            "air_conditioning"
-          ],
-          "images": [
-            "https://images.unsplash.com/photo-1759372945658-1e9f56e751bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBiZWFjaCUyMHZpbGxhJTIwZXh0ZXJpb3J8ZW58MHx8fHwxNzc2Mjc2ODc3fDA&ixlib=rb-4.1.0&q=85"
-          ],
-          "rating": 4.9,
-          "review_count": 156,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262189+00:00",
-          "updated_at": "2026-04-15T18:40:29.262190+00:00"
-        }
-      ]
-    },
-    {
-      "test": "Get Host Bookings",
-      "success": true,
-      "details": "",
-      "response_data": [
-        {
-          "id": "book_d6b40fd27205",
-          "property_id": "prop_d2adb6111cec",
-          "property_title": "Luxury Mediterranean Villa",
-          "property_image": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png",
-          "guest_id": "user_e554fd4d1f4b",
-          "guest_name": "Admin",
-          "host_id": "user_e554fd4d1f4b",
-          "check_in": "2026-04-22T18:48:20.902306",
-          "check_out": "2026-04-25T18:48:20.902315",
-          "guests": 2,
-          "nights": 3,
-          "price_per_night": 350.0,
-          "subtotal": 1050.0,
-          "service_fee": 126.0,
-          "total": 1176.0,
-          "status": "pending",
-          "payment_status": "pending",
-          "payment_method": "stripe",
-          "created_at": "2026-04-15T18:48:21.132423+00:00"
-        }
-      ]
-    },
-    {
-      "test": "Get Host Stats",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "properties": 4,
-        "total_bookings": 1,
+        "properties": 0,
+        "total_bookings": 0,
         "confirmed_bookings": 0,
         "total_earnings": 0
       }
     },
     {
-      "test": "Add to Favorites",
+      "test": "Create Booking with Email",
       "success": true,
       "details": "",
       "response_data": {
-        "message": "Added to favorites"
+        "id": "book_bfd10375fa67",
+        "property_id": "prop_d2adb6111cec",
+        "property_title": "Luxury Mediterranean Villa",
+        "property_image": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png",
+        "guest_id": "user_f8727900d388",
+        "guest_name": "Admin",
+        "guest_email": "admin@faceyouface.com",
+        "host_id": "user_e554fd4d1f4b",
+        "check_in": "2026-05-15T19:08:44.894548",
+        "check_out": "2026-05-18T19:08:44.894548",
+        "guests": 2,
+        "nights": 3,
+        "price_per_night": 350.0,
+        "subtotal": 1050.0,
+        "service_fee": 126.0,
+        "total": 1176.0,
+        "status": "pending",
+        "payment_status": "pending",
+        "payment_method": "stripe",
+        "created_at": "2026-04-15T19:08:45.124299+00:00"
       }
     },
     {
-      "test": "Get Favorites",
-      "success": true,
-      "details": "",
-      "response_data": [
-        {
-          "id": "prop_d2adb6111cec",
-          "host_id": "user_e554fd4d1f4b",
-          "host_name": "Admin",
-          "title": "Luxury Mediterranean Villa",
-          "description": "Experience the ultimate getaway in this stunning Mediterranean villa with breathtaking sea views, private pool, and modern amenities.",
-          "property_type": "villa",
-          "price_per_night": 350.0,
-          "location": "Costa Brava",
-          "city": "Barcelona",
-          "country": "Spain",
-          "max_guests": 8,
-          "bedrooms": 4,
-          "bathrooms": 3,
-          "amenities": [
-            "wifi",
-            "pool",
-            "kitchen",
-            "parking",
-            "air_conditioning",
-            "sea_view"
-          ],
-          "images": [
-            "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png"
-          ],
-          "rating": 4.9,
-          "review_count": 128,
-          "is_active": true,
-          "created_at": "2026-04-15T18:40:29.262156+00:00",
-          "updated_at": "2026-04-15T18:40:29.262160+00:00"
-        }
-      ]
-    },
-    {
-      "test": "Remove from Favorites",
+      "test": "Property Availability",
       "success": true,
       "details": "",
       "response_data": {
-        "message": "Removed from favorites"
-      }
-    },
-    {
-      "test": "Create Stripe Payment Session",
-      "success": true,
-      "details": "",
-      "response_data": {
-        "url": "https://checkout.stripe.com/c/pay/cs_test_a14PVybQR6eQp3mWKSFICPIjiLndY8rSsNWfZAGvLUNeoL56nc5Nb22jwK#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdkdWxOYHwnPyd1blpxYHZxWjA0V2xNTENDfzdyMWhcSU5%2Fam5DVlBQfVF3ZHN%2FSWl1NG1fcUFid3BpN01sfHcwVzJfRmhrfURAaD1PQjd9cEM8TEQzaU0yTXNcb3BrY3U2PH9GUXRQVmNINTVJbHREckN3NCcpJ2N3amhWYHdzYHcnP3F3cGApJ2dkZm5id2pwa2FGamlqdyc%2FJyZjY2NjY2MnKSdpZHxqcHFRfHVgJz8ndmxrYmlgWmxxYGgnKSdga2RnaWBVaWRmYG1qaWFgd3YnP3F3cGB4JSUl",
-        "session_id": "cs_test_a14PVybQR6eQp3mWKSFICPIjiLndY8rSsNWfZAGvLUNeoL56nc5Nb22jwK"
+        "booked_dates": [
+          "2026-04-22",
+          "2026-04-23",
+          "2026-04-24",
+          "2026-04-25",
+          "2026-04-29",
+          "2026-04-30",
+          "2026-05-01",
+          "2026-05-02"
+        ]
       }
     }
   ]

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Home, Loader2 } from 'lucide-react';
 
+// FaceYouFace Auth Callback
+
 const AuthCallback = () => {
   const navigate = useNavigate();
   const location = useLocation();

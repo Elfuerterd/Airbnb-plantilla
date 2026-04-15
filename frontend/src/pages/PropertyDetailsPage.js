@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { format, differenceInDays } from 'date-fns';
-import { Star, MapPin, Users, Bed, Bath, Wifi, Car, Utensils, Wind, Waves, Mountain, Heart, Share, ChevronLeft } from 'lucide-react';
+import { Star, MapPin, Users, Bed, Bath, Wifi, Car, Utensils, Wind, Waves, Mountain, Heart, Share, ChevronLeft, MessageCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import SearchModal from '../components/SearchModal';
@@ -130,6 +130,28 @@ const PropertyDetailsPage = () => {
     }
   };
 
+  const handleContactHost = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      // Send an initial message to start a conversation
+      await axios.post(`${API_URL}/api/messages`, {
+        recipient_id: property.host_id,
+        property_id: id,
+        content: `Hi! I'm interested in your property "${property.title}". Could you tell me more about it?`
+      }, { withCredentials: true });
+      
+      toast.success('Message sent! Redirecting to messages...');
+      navigate('/messages');
+    } catch (error) {
+      console.error('Error contacting host:', error);
+      toast.error('Failed to send message');
+    }
+  };
+
   const nights = checkIn && checkOut ? differenceInDays(checkOut, checkIn) : 0;
   const subtotal = nights * (property?.price_per_night || 0);
   const serviceFee = subtotal * 0.12;
@@ -251,14 +273,25 @@ const PropertyDetailsPage = () => {
             </div>
 
             {/* Host Info */}
-            <div className="flex items-center gap-4 py-6 border-y border-slate-200">
-              <div className="w-14 h-14 bg-slate-200 rounded-full flex items-center justify-center">
-                <Users className="w-7 h-7 text-slate-500" />
+            <div className="flex items-center justify-between py-6 border-y border-slate-200">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-slate-200 rounded-full flex items-center justify-center">
+                  <Users className="w-7 h-7 text-slate-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-slate-900">Hosted by {property.host_name}</p>
+                  <p className="text-sm text-slate-500 capitalize">{property.property_type}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-slate-900">Hosted by {property.host_name}</p>
-                <p className="text-sm text-slate-500 capitalize">{property.property_type}</p>
-              </div>
+              <Button
+                variant="outline"
+                onClick={handleContactHost}
+                className="flex items-center gap-2"
+                data-testid="contact-host-btn"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Contact Host
+              </Button>
             </div>
 
             {/* Key Features */}

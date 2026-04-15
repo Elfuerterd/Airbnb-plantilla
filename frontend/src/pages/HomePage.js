@@ -163,7 +163,7 @@ const HomePage = () => {
                 Become a host
               </h2>
               <p className="text-slate-300 max-w-lg">
-                Earn extra income by sharing your space. Join thousands of hosts who are already earning with StayBnB.
+                Earn extra income by sharing your space. Join thousands of hosts who are already earning with FaceYouFace.
               </p>
             </div>
             <Link
@@ -185,10 +185,10 @@ const HomePage = () => {
               <div className="w-6 h-6 bg-rose-500 rounded flex items-center justify-center">
                 <Home className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-medium text-slate-900">StayBnB</span>
+              <span className="text-sm font-medium text-slate-900">FaceYouFace</span>
             </div>
             <p className="text-sm text-slate-500">
-              © 2024 StayBnB. All rights reserved.
+              © 2024 FaceYouFace. All rights reserved.
             </p>
           </div>
         </div>

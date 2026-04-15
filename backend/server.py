@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, Body, File, UploadFile, BackgroundTasks
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -15,6 +15,7 @@ import bcrypt
 import jwt
 import secrets
 import httpx
+import requests
 from bson import ObjectId
 
 # Initialize logging
@@ -29,7 +30,7 @@ db = client[os.environ['DB_NAME']]
 # JWT Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', secrets.token_hex(32))
 JWT_ALGORITHM = "HS256"
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@staybnb.com')
+ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@faceyouface.com')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
 # Stripe Configuration
@@ -39,8 +40,171 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', 'sk_test_emergent')
 PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', '')
 PAYPAL_SECRET = os.environ.get('PAYPAL_SECRET', '')
 
-app = FastAPI(title="StayBnB API")
+# Emergent Storage Configuration
+STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+APP_NAME = "faceyouface"
+storage_key = None
+
+# SendGrid Configuration
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@faceyouface.com')
+
+app = FastAPI(title="FaceYouFace API")
 api_router = APIRouter(prefix="/api")
+
+# ============== STORAGE HELPERS ==============
+
+def init_storage():
+    """Initialize object storage - call once at startup"""
+    global storage_key
+    if storage_key:
+        return storage_key
+    if not EMERGENT_KEY:
+        logger.warning("EMERGENT_LLM_KEY not set, storage disabled")
+        return None
+    try:
+        resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+        resp.raise_for_status()
+        storage_key = resp.json()["storage_key"]
+        logger.info("Object storage initialized successfully")
+        return storage_key
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
+        return None
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    """Upload file to storage"""
+    key = init_storage()
+    if not key:
+        raise HTTPException(status_code=500, detail="Storage not available")
+    resp = requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data, timeout=120
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+def get_object(path: str) -> tuple:
+    """Download file from storage"""
+    key = init_storage()
+    if not key:
+        raise HTTPException(status_code=500, detail="Storage not available")
+    resp = requests.get(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key}, timeout=60
+    )
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+# ============== EMAIL HELPERS ==============
+
+async def send_email(to: str, subject: str, html_content: str):
+    """Send email via SendGrid"""
+    if not SENDGRID_API_KEY:
+        logger.warning(f"SendGrid not configured, would send email to {to}: {subject}")
+        return True
+    
+    try:
+        async with httpx.AsyncClient() as client_http:
+            response = await client_http.post(
+                "https://api.sendgrid.com/v3/mail/send",
+                headers={
+                    "Authorization": f"Bearer {SENDGRID_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "personalizations": [{"to": [{"email": to}]}],
+                    "from": {"email": SENDER_EMAIL, "name": "FaceYouFace"},
+                    "subject": subject,
+                    "content": [{"type": "text/html", "value": html_content}]
+                }
+            )
+            return response.status_code == 202
+    except Exception as e:
+        logger.error(f"Email send failed: {e}")
+        return False
+
+async def send_booking_confirmation_email(booking: dict, guest_email: str):
+    """Send booking confirmation email to guest"""
+    subject = f"Booking Confirmed - {booking['property_title']}"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Manrope', sans-serif; color: #0F172A; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: #F43F5E; color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }}
+            .content {{ background: #F7F7F9; padding: 30px; border-radius: 0 0 12px 12px; }}
+            .detail {{ margin: 15px 0; padding: 15px; background: white; border-radius: 8px; }}
+            .total {{ font-size: 24px; font-weight: bold; color: #F43F5E; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Booking Confirmed!</h1>
+            </div>
+            <div class="content">
+                <h2>{booking['property_title']}</h2>
+                <div class="detail">
+                    <p><strong>Check-in:</strong> {booking['check_in'][:10]}</p>
+                    <p><strong>Check-out:</strong> {booking['check_out'][:10]}</p>
+                    <p><strong>Guests:</strong> {booking['guests']}</p>
+                    <p><strong>Nights:</strong> {booking['nights']}</p>
+                </div>
+                <div class="detail">
+                    <p><strong>Price per night:</strong> ${booking['price_per_night']:.2f}</p>
+                    <p><strong>Service fee:</strong> ${booking['service_fee']:.2f}</p>
+                    <p class="total">Total: ${booking['total']:.2f}</p>
+                </div>
+                <p>Thank you for booking with FaceYouFace!</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    await send_email(guest_email, subject, html_content)
+
+async def send_booking_notification_to_host(booking: dict, host_email: str):
+    """Send new booking notification to host"""
+    subject = f"New Booking Request - {booking['property_title']}"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Manrope', sans-serif; color: #0F172A; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: #0F172A; color: white; padding: 30px; text-align: center; border-radius: 12px 12px 0 0; }}
+            .content {{ background: #F7F7F9; padding: 30px; border-radius: 0 0 12px 12px; }}
+            .detail {{ margin: 15px 0; padding: 15px; background: white; border-radius: 8px; }}
+            .btn {{ display: inline-block; background: #F43F5E; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>New Booking Request!</h1>
+            </div>
+            <div class="content">
+                <h2>{booking['property_title']}</h2>
+                <div class="detail">
+                    <p><strong>Guest:</strong> {booking['guest_name']}</p>
+                    <p><strong>Check-in:</strong> {booking['check_in'][:10]}</p>
+                    <p><strong>Check-out:</strong> {booking['check_out'][:10]}</p>
+                    <p><strong>Guests:</strong> {booking['guests']}</p>
+                    <p><strong>Total:</strong> ${booking['total']:.2f}</p>
+                </div>
+                <p>Log in to your dashboard to confirm or decline this booking.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    await send_email(host_email, subject, html_content)
 
 # ============== MODELS ==============
 
@@ -48,7 +212,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
-    role: str = "guest"  # guest or host
+    role: str = "guest"
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -65,7 +229,7 @@ class UserResponse(BaseModel):
 class PropertyCreate(BaseModel):
     title: str
     description: str
-    property_type: str  # apartment, house, villa, cabin, etc.
+    property_type: str
     price_per_night: float
     location: str
     city: str
@@ -97,7 +261,7 @@ class BookingCreate(BaseModel):
     check_in: datetime
     check_out: datetime
     guests: int = 1
-    payment_method: str = "stripe"  # stripe or paypal
+    payment_method: str = "stripe"
 
 class ReviewCreate(BaseModel):
     property_id: str
@@ -110,6 +274,12 @@ class PaymentRequest(BaseModel):
     amount: float
     payment_method: str = "stripe"
     origin_url: str
+
+class MessageCreate(BaseModel):
+    recipient_id: str
+    property_id: Optional[str] = None
+    booking_id: Optional[str] = None
+    content: str
 
 # ============== PASSWORD HELPERS ==============
 
@@ -310,7 +480,6 @@ async def exchange_session(request: Request, response: Response, session_id: str
         data = resp.json()
         email = data["email"].lower()
         
-        # Check if user exists
         user = await db.users.find_one({"email": email}, {"_id": 0})
         if not user:
             user_id = f"user_{uuid.uuid4().hex[:12]}"
@@ -326,12 +495,10 @@ async def exchange_session(request: Request, response: Response, session_id: str
             await db.users.insert_one(user_doc)
             user = user_doc
         else:
-            # Update picture if changed
             if data.get("picture") and user.get("picture") != data.get("picture"):
                 await db.users.update_one({"email": email}, {"$set": {"picture": data.get("picture")}})
                 user["picture"] = data.get("picture")
         
-        # Store session
         session_token = data.get("session_token", secrets.token_urlsafe(32))
         await db.user_sessions.insert_one({
             "user_id": user["id"],
@@ -355,6 +522,74 @@ async def exchange_session(request: Request, response: Response, session_id: str
             "picture": user.get("picture"),
             "created_at": user["created_at"]
         }
+
+# ============== IMAGE UPLOAD ROUTES ==============
+
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+MIME_TYPES = {
+    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+    "gif": "image/gif", "webp": "image/webp"
+}
+
+@api_router.post("/upload/image")
+async def upload_image(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    # Validate file extension
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+    
+    # Read and validate size
+    data = await file.read()
+    if len(data) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Max 10MB")
+    
+    # Upload to storage
+    file_id = str(uuid.uuid4())
+    path = f"{APP_NAME}/uploads/{user['id']}/{file_id}.{ext}"
+    content_type = MIME_TYPES.get(ext, "application/octet-stream")
+    
+    try:
+        result = put_object(path, data, content_type)
+        
+        # Store reference in DB
+        file_doc = {
+            "id": file_id,
+            "user_id": user["id"],
+            "storage_path": result["path"],
+            "original_filename": file.filename,
+            "content_type": content_type,
+            "size": result.get("size", len(data)),
+            "is_deleted": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.files.insert_one(file_doc)
+        
+        return {
+            "id": file_id,
+            "url": f"/api/files/{file_id}",
+            "path": result["path"],
+            "filename": file.filename,
+            "size": len(data)
+        }
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Upload failed")
+
+@api_router.get("/files/{file_id}")
+async def get_file(file_id: str, auth: str = Query(None), request: Request = None):
+    # Optional auth check
+    file_doc = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    try:
+        data, content_type = get_object(file_doc["storage_path"])
+        return Response(content=data, media_type=file_doc.get("content_type", content_type))
+    except Exception as e:
+        logger.error(f"File download failed: {e}")
+        raise HTTPException(status_code=500, detail="File download failed")
 
 # ============== PROPERTY ROUTES ==============
 
@@ -464,12 +699,11 @@ async def get_host_properties(user: dict = Depends(get_current_user)):
 # ============== BOOKING ROUTES ==============
 
 @api_router.post("/bookings")
-async def create_booking(booking_data: BookingCreate, user: dict = Depends(get_current_user)):
+async def create_booking(booking_data: BookingCreate, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     property_doc = await db.properties.find_one({"id": booking_data.property_id}, {"_id": 0})
     if not property_doc:
         raise HTTPException(status_code=404, detail="Property not found")
     
-    # Calculate nights and total
     check_in = booking_data.check_in
     check_out = booking_data.check_out
     if check_out <= check_in:
@@ -480,7 +714,6 @@ async def create_booking(booking_data: BookingCreate, user: dict = Depends(get_c
     service_fee = subtotal * 0.12
     total = subtotal + service_fee
     
-    # Check availability
     existing = await db.bookings.find_one({
         "property_id": booking_data.property_id,
         "status": {"$in": ["pending", "confirmed"]},
@@ -499,6 +732,7 @@ async def create_booking(booking_data: BookingCreate, user: dict = Depends(get_c
         "property_image": property_doc["images"][0] if property_doc["images"] else None,
         "guest_id": user["id"],
         "guest_name": user["name"],
+        "guest_email": user["email"],
         "host_id": property_doc["host_id"],
         "check_in": check_in.isoformat(),
         "check_out": check_out.isoformat(),
@@ -514,6 +748,12 @@ async def create_booking(booking_data: BookingCreate, user: dict = Depends(get_c
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.bookings.insert_one(booking_doc)
+    
+    # Send notification email to host
+    host = await db.users.find_one({"id": property_doc["host_id"]}, {"_id": 0})
+    if host and host.get("email"):
+        background_tasks.add_task(send_booking_notification_to_host, booking_doc, host["email"])
+    
     booking_doc.pop("_id", None)
     return booking_doc
 
@@ -552,7 +792,7 @@ async def get_host_bookings(user: dict = Depends(get_current_user)):
     return bookings
 
 @api_router.post("/host/bookings/{booking_id}/confirm")
-async def confirm_booking(booking_id: str, user: dict = Depends(get_current_user)):
+async def confirm_booking(booking_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     booking = await db.bookings.find_one({"id": booking_id}, {"_id": 0})
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
@@ -560,7 +800,125 @@ async def confirm_booking(booking_id: str, user: dict = Depends(get_current_user
         raise HTTPException(status_code=403, detail="Not authorized")
     
     await db.bookings.update_one({"id": booking_id}, {"$set": {"status": "confirmed"}})
+    
+    # Send confirmation email to guest
+    if booking.get("guest_email"):
+        background_tasks.add_task(send_booking_confirmation_email, booking, booking["guest_email"])
+    
     return {"message": "Booking confirmed"}
+
+# ============== MESSAGING ROUTES ==============
+
+@api_router.post("/messages")
+async def send_message(message_data: MessageCreate, user: dict = Depends(get_current_user)):
+    recipient = await db.users.find_one({"id": message_data.recipient_id}, {"_id": 0})
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    
+    # Create or find conversation
+    participants = sorted([user["id"], message_data.recipient_id])
+    conversation = await db.conversations.find_one({
+        "participants": participants,
+        "property_id": message_data.property_id
+    }, {"_id": 0})
+    
+    if not conversation:
+        conversation_id = f"conv_{uuid.uuid4().hex[:12]}"
+        conversation = {
+            "id": conversation_id,
+            "participants": participants,
+            "property_id": message_data.property_id,
+            "booking_id": message_data.booking_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.conversations.insert_one(conversation)
+    else:
+        conversation_id = conversation["id"]
+    
+    message_id = f"msg_{uuid.uuid4().hex[:12]}"
+    message_doc = {
+        "id": message_id,
+        "conversation_id": conversation_id,
+        "sender_id": user["id"],
+        "sender_name": user["name"],
+        "sender_picture": user.get("picture"),
+        "recipient_id": message_data.recipient_id,
+        "content": message_data.content,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.messages.insert_one(message_doc)
+    
+    # Update conversation
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$set": {
+            "last_message": message_data.content[:100],
+            "last_message_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    message_doc.pop("_id", None)
+    return message_doc
+
+@api_router.get("/conversations")
+async def get_conversations(user: dict = Depends(get_current_user)):
+    conversations = await db.conversations.find(
+        {"participants": user["id"]},
+        {"_id": 0}
+    ).sort("updated_at", -1).to_list(100)
+    
+    # Enrich with other participant info
+    for conv in conversations:
+        other_id = [p for p in conv["participants"] if p != user["id"]][0]
+        other_user = await db.users.find_one({"id": other_id}, {"_id": 0, "id": 1, "name": 1, "picture": 1})
+        conv["other_user"] = other_user
+        
+        # Get unread count
+        unread = await db.messages.count_documents({
+            "conversation_id": conv["id"],
+            "recipient_id": user["id"],
+            "read": False
+        })
+        conv["unread_count"] = unread
+        
+        # Get property info if available
+        if conv.get("property_id"):
+            prop = await db.properties.find_one({"id": conv["property_id"]}, {"_id": 0, "id": 1, "title": 1, "images": 1})
+            conv["property"] = prop
+    
+    return conversations
+
+@api_router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(conversation_id: str, user: dict = Depends(get_current_user)):
+    conversation = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if user["id"] not in conversation["participants"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    messages = await db.messages.find(
+        {"conversation_id": conversation_id},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(500)
+    
+    # Mark as read
+    await db.messages.update_many(
+        {"conversation_id": conversation_id, "recipient_id": user["id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return messages
+
+@api_router.get("/messages/unread-count")
+async def get_unread_count(user: dict = Depends(get_current_user)):
+    count = await db.messages.count_documents({
+        "recipient_id": user["id"],
+        "read": False
+    })
+    return {"count": count}
 
 # ============== REVIEW ROUTES ==============
 
@@ -592,7 +950,6 @@ async def create_review(review_data: ReviewCreate, user: dict = Depends(get_curr
     }
     await db.reviews.insert_one(review_doc)
     
-    # Update property rating
     reviews = await db.reviews.find({"property_id": review_data.property_id}, {"_id": 0}).to_list(1000)
     avg_rating = sum(r["rating"] for r in reviews) / len(reviews)
     await db.properties.update_one(
@@ -638,7 +995,7 @@ async def get_favorites(user: dict = Depends(get_current_user)):
 # ============== PAYMENT ROUTES (STRIPE) ==============
 
 @api_router.post("/payments/stripe/create-session")
-async def create_stripe_session(request: Request, payment_data: PaymentRequest, user: dict = Depends(get_current_user)):
+async def create_stripe_session(request: Request, payment_data: PaymentRequest, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
     
     booking = await db.bookings.find_one({"id": payment_data.booking_id}, {"_id": 0})
@@ -667,7 +1024,6 @@ async def create_stripe_session(request: Request, payment_data: PaymentRequest, 
     
     session = await stripe_checkout.create_checkout_session(checkout_request)
     
-    # Create payment transaction record
     await db.payment_transactions.insert_one({
         "id": f"pay_{uuid.uuid4().hex[:12]}",
         "booking_id": payment_data.booking_id,
@@ -683,13 +1039,12 @@ async def create_stripe_session(request: Request, payment_data: PaymentRequest, 
     return {"url": session.url, "session_id": session.session_id}
 
 @api_router.get("/payments/stripe/status/{session_id}")
-async def get_stripe_status(session_id: str, user: dict = Depends(get_current_user)):
+async def get_stripe_status(session_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     from emergentintegrations.payments.stripe.checkout import StripeCheckout
     
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url="")
     status = await stripe_checkout.get_checkout_status(session_id)
     
-    # Update payment and booking status
     if status.payment_status == "paid":
         await db.payment_transactions.update_one(
             {"session_id": session_id},
@@ -702,6 +1057,11 @@ async def get_stripe_status(session_id: str, user: dict = Depends(get_current_us
                 {"id": payment["booking_id"]},
                 {"$set": {"payment_status": "paid", "status": "confirmed"}}
             )
+            
+            # Send confirmation email
+            booking = await db.bookings.find_one({"id": payment["booking_id"]}, {"_id": 0})
+            if booking and booking.get("guest_email"):
+                background_tasks.add_task(send_booking_confirmation_email, booking, booking["guest_email"])
     
     return {
         "status": status.status,
@@ -750,7 +1110,6 @@ async def create_paypal_order(payment_data: PaymentRequest, user: dict = Depends
     if booking["guest_id"] != user["id"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Get PayPal access token
     async with httpx.AsyncClient() as http_client:
         auth_response = await http_client.post(
             "https://api-m.sandbox.paypal.com/v1/oauth2/token",
@@ -762,7 +1121,6 @@ async def create_paypal_order(payment_data: PaymentRequest, user: dict = Depends
         
         access_token = auth_response.json()["access_token"]
         
-        # Create order
         order_response = await http_client.post(
             "https://api-m.sandbox.paypal.com/v2/checkout/orders",
             headers={
@@ -786,7 +1144,6 @@ async def create_paypal_order(payment_data: PaymentRequest, user: dict = Depends
         
         order_data = order_response.json()
         
-        # Create payment transaction record
         await db.payment_transactions.insert_one({
             "id": f"pay_{uuid.uuid4().hex[:12]}",
             "booking_id": payment_data.booking_id,
@@ -802,7 +1159,7 @@ async def create_paypal_order(payment_data: PaymentRequest, user: dict = Depends
         return {"order_id": order_data["id"]}
 
 @api_router.post("/payments/paypal/capture/{order_id}")
-async def capture_paypal_order(order_id: str, user: dict = Depends(get_current_user)):
+async def capture_paypal_order(order_id: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user)):
     if not PAYPAL_CLIENT_ID or not PAYPAL_SECRET:
         raise HTTPException(status_code=400, detail="PayPal not configured")
     
@@ -827,7 +1184,6 @@ async def capture_paypal_order(order_id: str, user: dict = Depends(get_current_u
         
         capture_data = capture_response.json()
         
-        # Update payment and booking
         payment = await db.payment_transactions.find_one({"order_id": order_id}, {"_id": 0})
         if payment and capture_data.get("status") == "COMPLETED":
             await db.payment_transactions.update_one(
@@ -838,6 +1194,11 @@ async def capture_paypal_order(order_id: str, user: dict = Depends(get_current_u
                 {"id": payment["booking_id"]},
                 {"$set": {"payment_status": "paid", "status": "confirmed"}}
             )
+            
+            # Send confirmation email
+            booking = await db.bookings.find_one({"id": payment["booking_id"]}, {"_id": 0})
+            if booking and booking.get("guest_email"):
+                background_tasks.add_task(send_booking_confirmation_email, booking, booking["guest_email"])
         
         return capture_data
 
@@ -884,7 +1245,6 @@ async def get_host_stats(user: dict = Depends(get_current_user)):
     total_bookings = await db.bookings.count_documents({"host_id": user["id"]})
     confirmed_bookings = await db.bookings.count_documents({"host_id": user["id"], "status": "confirmed"})
     
-    # Calculate total earnings
     paid_bookings = await db.bookings.find(
         {"host_id": user["id"], "payment_status": "paid"},
         {"_id": 0, "total": 1}
@@ -915,7 +1275,6 @@ async def seed_admin():
         })
         logger.info(f"Admin user created: {ADMIN_EMAIL}")
     
-    # Seed sample properties if none exist
     property_count = await db.properties.count_documents({})
     if property_count == 0:
         admin = await db.users.find_one({"email": ADMIN_EMAIL}, {"_id": 0})
@@ -1024,6 +1383,13 @@ async def seed_admin():
 
 @app.on_event("startup")
 async def startup():
+    # Initialize storage
+    try:
+        init_storage()
+    except Exception as e:
+        logger.warning(f"Storage initialization warning: {e}")
+    
+    # Create indexes
     await db.users.create_index("email", unique=True)
     await db.users.create_index("id", unique=True)
     await db.properties.create_index("id", unique=True)
@@ -1037,6 +1403,10 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.payment_transactions.create_index("session_id")
     await db.payment_transactions.create_index("order_id")
+    await db.messages.create_index("conversation_id")
+    await db.messages.create_index([("recipient_id", 1), ("read", 1)])
+    await db.conversations.create_index("participants")
+    await db.files.create_index("id", unique=True)
     
     await seed_admin()
     

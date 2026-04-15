@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, Menu, User, Heart, Home, LogOut, Settings, Calendar } from 'lucide-react';
+import { Search, Menu, User, Heart, Home, LogOut, Settings, Calendar, MessageCircle } from 'lucide-react';
+import axios from 'axios';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +12,28 @@ import {
 } from './ui/dropdown-menu';
 import { Button } from './ui/button';
 
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
 const Header = ({ onSearchClick }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/messages/unread-count`, { withCredentials: true });
+      setUnreadMessages(response.data.count);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -31,7 +50,7 @@ const Header = ({ onSearchClick }) => {
               <Home className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              StayBnB
+              FaceYouFace
             </span>
           </Link>
 
@@ -70,6 +89,21 @@ const Header = ({ onSearchClick }) => {
                 data-testid="favorites-link"
               >
                 <Heart className="w-5 h-5 text-slate-700" />
+              </Link>
+            )}
+
+            {isAuthenticated && (
+              <Link 
+                to="/messages" 
+                className="hidden md:flex w-10 h-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors relative"
+                data-testid="messages-link"
+              >
+                <MessageCircle className="w-5 h-5 text-slate-700" />
+                {unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </span>
+                )}
               </Link>
             )}
 

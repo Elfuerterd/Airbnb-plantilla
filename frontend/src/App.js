@@ -17,6 +17,7 @@ import PaymentPage from './pages/PaymentPage';
 import BookingSuccessPage from './pages/BookingSuccessPage';
 import HostDashboardPage from './pages/HostDashboardPage';
 import NewPropertyPage from './pages/NewPropertyPage';
+import MessagesPage from './pages/MessagesPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -76,6 +77,18 @@ function AppRouter() {
       <Route path="/booking-success" element={
         <ProtectedRoute>
           <BookingSuccessPage />
+        </ProtectedRoute>
+      } />
+
+      {/* Protected Routes - Messages */}
+      <Route path="/messages" element={
+        <ProtectedRoute>
+          <MessagesPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/messages/:conversationId" element={
+        <ProtectedRoute>
+          <MessagesPage />
         </ProtectedRoute>
       } />
 

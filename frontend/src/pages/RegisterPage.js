@@ -60,7 +60,7 @@ const RegisterPage = () => {
         <div className="absolute bottom-12 left-12 right-12">
           <blockquote className="text-white">
             <p className="text-2xl font-medium mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              "Hosting on StayBnB has been an incredible experience. I've met guests from all over the world!"
+              "Hosting on FaceYouFace has been an incredible experience. I've met guests from all over the world!"
             </p>
             <footer className="text-white/80">
               — Carlos Mendez, Host
@@ -78,7 +78,7 @@ const RegisterPage = () => {
               <Home className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              StayBnB
+              FaceYouFace
             </span>
           </Link>
 
@@ -89,7 +89,7 @@ const RegisterPage = () => {
             Create an account
           </h1>
           <p className="text-slate-600 mb-8">
-            Join StayBnB and start your journey
+            Join FaceYouFace and start your journey
           </p>
 
           {/* Role Selection */}

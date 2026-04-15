@@ -1,320 +1,355 @@
 #!/usr/bin/env python3
 
 import requests
-import sys
 import json
+import sys
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+import uuid
+import io
 
-class StayBnBAPITester:
-    def __init__(self, base_url: str = "https://lodging-portal-26.preview.emergentagent.com"):
+class FaceYouFaceAPITester:
+    def __init__(self, base_url="https://lodging-portal-26.preview.emergentagent.com"):
         self.base_url = base_url
         self.session = requests.Session()
-        self.access_token = None
-        self.user_data = None
+        self.admin_token = None
+        self.guest_token = None
+        self.test_property_id = None
+        self.test_booking_id = None
+        self.test_conversation_id = None
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
 
-    def log_test(self, name: str, success: bool, details: str = "", response_data: Any = None):
+    def log_test(self, test_name, success, details="", response_data=None):
         """Log test result"""
         self.tests_run += 1
         if success:
             self.tests_passed += 1
-            print(f"✅ {name}")
+            print(f"✅ {test_name}")
         else:
-            print(f"❌ {name} - {details}")
+            print(f"❌ {test_name} - {details}")
         
         self.test_results.append({
-            "test": name,
+            "test": test_name,
             "success": success,
             "details": details,
             "response_data": response_data
         })
 
-    def make_request(self, method: str, endpoint: str, data: Optional[Dict] = None, 
-                    expected_status: int = 200, use_auth: bool = False) -> tuple[bool, Dict]:
-        """Make HTTP request and validate response"""
-        url = f"{self.base_url}/api/{endpoint.lstrip('/')}"
-        headers = {'Content-Type': 'application/json'}
-        
-        if use_auth and self.access_token:
-            headers['Authorization'] = f'Bearer {self.access_token}'
-
+    def test_admin_login(self):
+        """Test admin login with FaceYouFace credentials"""
         try:
-            if method.upper() == 'GET':
-                response = self.session.get(url, headers=headers)
-            elif method.upper() == 'POST':
-                response = self.session.post(url, json=data, headers=headers)
-            elif method.upper() == 'PUT':
-                response = self.session.put(url, json=data, headers=headers)
-            elif method.upper() == 'DELETE':
-                response = self.session.delete(url, headers=headers)
+            response = self.session.post(f"{self.base_url}/api/auth/login", json={
+                "email": "admin@faceyouface.com",
+                "password": "admin123"
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("email") == "admin@faceyouface.com" and data.get("role") == "host":
+                    self.admin_token = response.cookies.get("access_token")
+                    self.log_test("Admin Login (FaceYouFace)", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Admin Login (FaceYouFace)", False, f"Invalid user data: {data}")
             else:
-                return False, {"error": f"Unsupported method: {method}"}
-
-            success = response.status_code == expected_status
-            try:
-                response_data = response.json()
-            except:
-                response_data = {"status_code": response.status_code, "text": response.text}
-
-            return success, response_data
-
+                self.log_test("Admin Login (FaceYouFace)", False, f"Status {response.status_code}: {response.text}")
         except Exception as e:
-            return False, {"error": str(e)}
+            self.log_test("Admin Login (FaceYouFace)", False, f"Exception: {str(e)}")
+        return False
 
-    def test_auth_endpoints(self):
-        """Test authentication endpoints"""
-        print("\n🔐 Testing Authentication Endpoints...")
-        
-        # Test user registration
-        test_user_data = {
-            "email": f"test_user_{datetime.now().strftime('%H%M%S')}@test.com",
-            "password": "TestPass123!",
-            "name": "Test User",
-            "role": "guest"
-        }
-        
-        success, response = self.make_request('POST', 'auth/register', test_user_data, 200)
-        self.log_test("User Registration", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        if success:
-            self.user_data = response
-        
-        # Test admin login
-        admin_login_data = {
-            "email": "admin@staybnb.com",
-            "password": "admin123"
-        }
-        
-        success, response = self.make_request('POST', 'auth/login', admin_login_data, 200)
-        self.log_test("Admin Login", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        if success and 'id' in response:
-            # Extract token from cookies if available
-            for cookie in self.session.cookies:
-                if cookie.name == 'access_token':
-                    self.access_token = cookie.value
-                    break
-        
-        # Test get current user
-        success, response = self.make_request('GET', 'auth/me', expected_status=200, use_auth=True)
-        self.log_test("Get Current User", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        # Test logout
-        success, response = self.make_request('POST', 'auth/logout', expected_status=200)
-        self.log_test("User Logout", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+    def test_guest_registration(self):
+        """Test guest user registration"""
+        try:
+            test_email = f"guest_{uuid.uuid4().hex[:8]}@faceyouface.com"
+            response = self.session.post(f"{self.base_url}/api/auth/register", json={
+                "email": test_email,
+                "password": "guest123",
+                "name": "Test Guest",
+                "role": "guest"
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.guest_token = response.cookies.get("access_token")
+                self.log_test("Guest Registration", True, response_data=data)
+                return True
+            else:
+                self.log_test("Guest Registration", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Guest Registration", False, f"Exception: {str(e)}")
+        return False
 
-    def test_property_endpoints(self):
-        """Test property-related endpoints"""
-        print("\n🏠 Testing Property Endpoints...")
-        
-        # Test get all properties
-        success, response = self.make_request('GET', 'properties', expected_status=200)
-        self.log_test("Get All Properties", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        properties = response.get('properties', []) if success else []
-        
-        # Test get featured properties
-        success, response = self.make_request('GET', 'properties/featured', expected_status=200)
-        self.log_test("Get Featured Properties", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        # Test property search with filters
-        success, response = self.make_request('GET', 'properties?city=Barcelona&property_type=villa', expected_status=200)
-        self.log_test("Property Search with Filters", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        # Test get specific property
-        if properties:
-            property_id = properties[0]['id']
-            success, response = self.make_request('GET', f'properties/{property_id}', expected_status=200)
-            self.log_test("Get Specific Property", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+    def test_image_upload(self):
+        """Test image upload endpoint with object storage"""
+        try:
+            # Create a simple test image (1x1 pixel PNG)
+            test_image_data = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\tpHYs\x00\x00\x0b\x13\x00\x00\x0b\x13\x01\x00\x9a\x9c\x18\x00\x00\x00\x12IDATx\x9cc```bPPP\x00\x02\xac\x01\x00\x00\x05\x00\x01\r\n-\xdb\x00\x00\x00\x00IEND\xaeB`\x82'
             
-            # Test property availability
-            success, response = self.make_request('GET', f'properties/{property_id}/availability', expected_status=200)
-            self.log_test("Get Property Availability", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+            files = {'file': ('test.png', io.BytesIO(test_image_data), 'image/png')}
+            response = self.session.post(f"{self.base_url}/api/upload/image", files=files)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'id' in data and 'url' in data:
+                    self.log_test("Image Upload (Object Storage)", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Image Upload (Object Storage)", False, f"Missing required fields: {data}")
+            else:
+                self.log_test("Image Upload (Object Storage)", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Image Upload (Object Storage)", False, f"Exception: {str(e)}")
+        return False
 
-    def test_booking_endpoints(self):
-        """Test booking-related endpoints"""
-        print("\n📅 Testing Booking Endpoints...")
-        
-        # Re-login as admin to test host features
-        admin_login_data = {
-            "email": "admin@staybnb.com",
-            "password": "admin123"
-        }
-        
-        success, response = self.make_request('POST', 'auth/login', admin_login_data, 200)
-        if success:
-            for cookie in self.session.cookies:
-                if cookie.name == 'access_token':
-                    self.access_token = cookie.value
-                    break
-        
-        # Get properties first
-        success, response = self.make_request('GET', 'properties', expected_status=200)
-        properties = response.get('properties', []) if success else []
-        
-        if properties:
-            property_id = properties[0]['id']
+    def test_get_properties(self):
+        """Test getting properties and store first property ID"""
+        try:
+            response = self.session.get(f"{self.base_url}/api/properties")
             
-            # Test create booking
-            booking_data = {
-                "property_id": property_id,
-                "check_in": (datetime.now() + timedelta(days=7)).isoformat(),
-                "check_out": (datetime.now() + timedelta(days=10)).isoformat(),
-                "guests": 2,
-                "payment_method": "stripe"
-            }
-            
-            success, response = self.make_request('POST', 'bookings', booking_data, 200, use_auth=True)
-            self.log_test("Create Booking", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-            
-            booking_id = response.get('id') if success else None
-            
-            # Test get user bookings
-            success, response = self.make_request('GET', 'bookings', expected_status=200, use_auth=True)
-            self.log_test("Get User Bookings", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-            
-            # Test get specific booking
-            if booking_id:
-                success, response = self.make_request('GET', f'bookings/{booking_id}', expected_status=200, use_auth=True)
-                self.log_test("Get Specific Booking", success, 
-                             "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+            if response.status_code == 200:
+                data = response.json()
+                if 'properties' in data and len(data['properties']) > 0:
+                    self.test_property_id = data['properties'][0]['id']
+                    self.log_test("Get Properties", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Get Properties", False, f"No properties found: {data}")
+            else:
+                self.log_test("Get Properties", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Get Properties", False, f"Exception: {str(e)}")
+        return False
 
-    def test_host_endpoints(self):
-        """Test host-specific endpoints"""
-        print("\n👨‍💼 Testing Host Endpoints...")
-        
-        # Test get host properties
-        success, response = self.make_request('GET', 'host/properties', expected_status=200, use_auth=True)
-        self.log_test("Get Host Properties", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        # Test get host bookings
-        success, response = self.make_request('GET', 'host/bookings', expected_status=200, use_auth=True)
-        self.log_test("Get Host Bookings", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-        
-        # Test get host stats
-        success, response = self.make_request('GET', 'host/stats', expected_status=200, use_auth=True)
-        self.log_test("Get Host Stats", success, 
-                     "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+    def test_conversations_endpoint(self):
+        """Test conversations endpoint"""
+        try:
+            response = self.session.get(f"{self.base_url}/api/conversations")
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Get Conversations", True, response_data=data)
+                return True
+            else:
+                self.log_test("Get Conversations", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Get Conversations", False, f"Exception: {str(e)}")
+        return False
 
-    def test_favorites_endpoints(self):
-        """Test favorites functionality"""
-        print("\n❤️ Testing Favorites Endpoints...")
-        
-        # Get properties first
-        success, response = self.make_request('GET', 'properties', expected_status=200)
-        properties = response.get('properties', []) if success else []
-        
-        if properties:
-            property_id = properties[0]['id']
+    def test_send_message(self):
+        """Test sending a message"""
+        if not self.test_property_id:
+            self.log_test("Send Message", False, "No property ID available")
+            return False
             
-            # Test add to favorites
-            success, response = self.make_request('POST', f'favorites/{property_id}', expected_status=200, use_auth=True)
-            self.log_test("Add to Favorites", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+        try:
+            # Create a test user to send message to
+            test_email = f"recipient_{uuid.uuid4().hex[:8]}@faceyouface.com"
+            reg_response = self.session.post(f"{self.base_url}/api/auth/register", json={
+                "email": test_email,
+                "password": "recipient123",
+                "name": "Test Recipient",
+                "role": "guest"
+            })
             
-            # Test get favorites
-            success, response = self.make_request('GET', 'favorites', expected_status=200, use_auth=True)
-            self.log_test("Get Favorites", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-            
-            # Test remove from favorites
-            success, response = self.make_request('DELETE', f'favorites/{property_id}', expected_status=200, use_auth=True)
-            self.log_test("Remove from Favorites", success, 
-                         "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
-
-    def test_payment_endpoints(self):
-        """Test payment-related endpoints"""
-        print("\n💳 Testing Payment Endpoints...")
-        
-        # Get properties and create a booking first
-        success, response = self.make_request('GET', 'properties', expected_status=200)
-        properties = response.get('properties', []) if success else []
-        
-        if properties:
-            property_id = properties[0]['id']
-            
-            # Create a booking
-            booking_data = {
-                "property_id": property_id,
-                "check_in": (datetime.now() + timedelta(days=14)).isoformat(),
-                "check_out": (datetime.now() + timedelta(days=17)).isoformat(),
-                "guests": 2,
-                "payment_method": "stripe"
-            }
-            
-            success, response = self.make_request('POST', 'bookings', booking_data, 200, use_auth=True)
-            booking_id = response.get('id') if success else None
-            
-            if booking_id:
-                # Test create Stripe payment session
-                payment_data = {
-                    "booking_id": booking_id,
-                    "amount": 500.0,
-                    "payment_method": "stripe",
-                    "origin_url": "https://lodging-portal-26.preview.emergentagent.com"
-                }
+            if reg_response.status_code != 200:
+                self.log_test("Send Message", False, "Failed to create recipient user")
+                return False
                 
-                success, response = self.make_request('POST', 'payments/stripe/create-session', payment_data, 200, use_auth=True)
-                self.log_test("Create Stripe Payment Session", success, 
-                             "" if success else f"Status: {response.get('status_code', 'unknown')}", response)
+            recipient_id = reg_response.json()['id']
+            
+            # Send message
+            response = self.session.post(f"{self.base_url}/api/messages", json={
+                "recipient_id": recipient_id,
+                "property_id": self.test_property_id,
+                "content": "Hello! I'm interested in your property."
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'id' in data and 'conversation_id' in data:
+                    self.test_conversation_id = data['conversation_id']
+                    self.log_test("Send Message", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Send Message", False, f"Missing required fields: {data}")
+            else:
+                self.log_test("Send Message", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Send Message", False, f"Exception: {str(e)}")
+        return False
+
+    def test_unread_messages_count(self):
+        """Test unread messages count endpoint"""
+        try:
+            response = self.session.get(f"{self.base_url}/api/messages/unread-count")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'count' in data:
+                    self.log_test("Unread Messages Count", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Unread Messages Count", False, f"Missing count field: {data}")
+            else:
+                self.log_test("Unread Messages Count", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Unread Messages Count", False, f"Exception: {str(e)}")
+        return False
+
+    def test_conversation_messages(self):
+        """Test getting messages from a conversation"""
+        if not self.test_conversation_id:
+            self.log_test("Get Conversation Messages", False, "No conversation ID available")
+            return False
+            
+        try:
+            response = self.session.get(f"{self.base_url}/api/conversations/{self.test_conversation_id}/messages")
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Get Conversation Messages", True, response_data=data)
+                return True
+            else:
+                self.log_test("Get Conversation Messages", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Get Conversation Messages", False, f"Exception: {str(e)}")
+        return False
+
+    def test_host_stats(self):
+        """Test host dashboard stats"""
+        try:
+            # Re-login as admin to ensure we have host privileges
+            login_response = self.session.post(f"{self.base_url}/api/auth/login", json={
+                "email": "admin@faceyouface.com",
+                "password": "admin123"
+            })
+            
+            response = self.session.get(f"{self.base_url}/api/host/stats")
+            
+            if response.status_code == 200:
+                data = response.json()
+                required_fields = ['properties', 'total_bookings', 'confirmed_bookings', 'total_earnings']
+                if all(field in data for field in required_fields):
+                    self.log_test("Host Dashboard Stats", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Host Dashboard Stats", False, f"Missing required fields: {data}")
+            else:
+                self.log_test("Host Dashboard Stats", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Host Dashboard Stats", False, f"Exception: {str(e)}")
+        return False
+
+    def test_create_booking_with_email(self):
+        """Test booking creation which should trigger email notification"""
+        if not self.test_property_id:
+            self.log_test("Create Booking with Email", False, "No property ID available")
+            return False
+            
+        try:
+            # Use dates far in the future to avoid conflicts
+            check_in = datetime.now() + timedelta(days=30)
+            check_out = check_in + timedelta(days=3)
+            
+            response = self.session.post(f"{self.base_url}/api/bookings", json={
+                "property_id": self.test_property_id,
+                "check_in": check_in.isoformat(),
+                "check_out": check_out.isoformat(),
+                "guests": 2,
+                "payment_method": "stripe"
+            })
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'id' in data and 'total' in data:
+                    self.test_booking_id = data['id']
+                    self.log_test("Create Booking with Email", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Create Booking with Email", False, f"Missing required fields: {data}")
+            else:
+                self.log_test("Create Booking with Email", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Create Booking with Email", False, f"Exception: {str(e)}")
+        return False
+
+    def test_property_availability(self):
+        """Test property availability calendar"""
+        if not self.test_property_id:
+            self.log_test("Property Availability", False, "No property ID available")
+            return False
+            
+        try:
+            response = self.session.get(f"{self.base_url}/api/properties/{self.test_property_id}/availability")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'booked_dates' in data:
+                    self.log_test("Property Availability", True, response_data=data)
+                    return True
+                else:
+                    self.log_test("Property Availability", False, f"Missing booked_dates field: {data}")
+            else:
+                self.log_test("Property Availability", False, f"Status {response.status_code}: {response.text}")
+        except Exception as e:
+            self.log_test("Property Availability", False, f"Exception: {str(e)}")
+        return False
 
     def run_all_tests(self):
-        """Run all test suites"""
-        print("🚀 Starting StayBnB API Tests...")
+        """Run all backend tests"""
+        print("🚀 Starting FaceYouFace Backend API Tests...")
         print(f"Testing against: {self.base_url}")
+        print("=" * 60)
         
-        try:
-            self.test_auth_endpoints()
-            self.test_property_endpoints()
-            self.test_booking_endpoints()
-            self.test_host_endpoints()
-            self.test_favorites_endpoints()
-            self.test_payment_endpoints()
-            
-        except Exception as e:
-            print(f"❌ Test suite failed with error: {e}")
+        # Authentication tests
+        if not self.test_admin_login():
+            print("❌ Admin login failed - stopping tests")
             return False
+            
+        self.test_guest_registration()
         
-        # Print summary
-        print(f"\n📊 Test Summary:")
-        print(f"Tests run: {self.tests_run}")
-        print(f"Tests passed: {self.tests_passed}")
-        print(f"Tests failed: {self.tests_run - self.tests_passed}")
-        print(f"Success rate: {(self.tests_passed / self.tests_run * 100):.1f}%")
+        # Core functionality tests
+        self.test_get_properties()
+        self.test_image_upload()
+        
+        # Messaging system tests
+        self.test_conversations_endpoint()
+        self.test_send_message()
+        self.test_unread_messages_count()
+        self.test_conversation_messages()
+        
+        # Host features
+        self.test_host_stats()
+        
+        # Booking and calendar
+        self.test_create_booking_with_email()
+        self.test_property_availability()
+        
+        # Results
+        print("\n" + "=" * 60)
+        print(f"📊 Test Results: {self.tests_passed}/{self.tests_run} passed")
+        success_rate = (self.tests_passed / self.tests_run) * 100 if self.tests_run > 0 else 0
+        print(f"📈 Success Rate: {success_rate:.1f}%")
+        
+        # Save detailed results
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "total_tests": self.tests_run,
+            "passed_tests": self.tests_passed,
+            "failed_tests": self.tests_run - self.tests_passed,
+            "success_rate": success_rate,
+            "test_results": self.test_results
+        }
+        
+        with open("/app/test_reports/backend_test_results.json", "w") as f:
+            json.dump(results, f, indent=2)
         
         return self.tests_passed == self.tests_run
 
 def main():
-    tester = StayBnBAPITester()
+    tester = FaceYouFaceAPITester()
     success = tester.run_all_tests()
-    
-    # Save detailed results
-    with open('/app/test_reports/backend_test_results.json', 'w') as f:
-        json.dump({
-            "timestamp": datetime.now().isoformat(),
-            "total_tests": tester.tests_run,
-            "passed_tests": tester.tests_passed,
-            "failed_tests": tester.tests_run - tester.tests_passed,
-            "success_rate": (tester.tests_passed / tester.tests_run * 100) if tester.tests_run > 0 else 0,
-            "test_results": tester.test_results
-        }, f, indent=2)
-    
     return 0 if success else 1
 
 if __name__ == "__main__":

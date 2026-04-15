@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, Plus, X, Upload, Home } from 'lucide-react';
+import { ChevronLeft, Plus, X, Upload, Home, Image, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import { Button } from '../components/ui/button';
@@ -43,6 +43,7 @@ const NewPropertyPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -72,6 +73,51 @@ const NewPropertyPage = () => {
         ? prev.amenities.filter(a => a !== amenityId)
         : [...prev.amenities, amenityId]
     }));
+  };
+
+  const handleImageUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    if (formData.images.length >= 5) {
+      toast.error('Maximum 5 images allowed');
+      return;
+    }
+
+    const file = files[0];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a valid image (JPG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image must be less than 10MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      
+      const response = await axios.post(`${API_URL}/api/upload/image`, uploadData, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const imageUrl = `${API_URL}${response.data.url}`;
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, imageUrl]
+      }));
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const addImageUrl = () => {
@@ -365,23 +411,54 @@ const NewPropertyPage = () => {
             {/* Images */}
             <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
               <h2 className="text-lg font-semibold text-slate-900">Images</h2>
-              <p className="text-sm text-slate-500">Add up to 5 image URLs for your property</p>
+              <p className="text-sm text-slate-500">Add up to 5 images for your property</p>
               
-              <div className="flex gap-2">
-                <Input
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="Enter image URL (e.g., https://...)"
-                  data-testid="input-image-url"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={addImageUrl}
-                  disabled={formData.images.length >= 5}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
+              {/* Upload Button */}
+              <div className="flex flex-col gap-4">
+                <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-rose-400 hover:bg-rose-50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploadingImage || formData.images.length >= 5}
+                    data-testid="image-upload-input"
+                  />
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 className="w-5 h-5 text-rose-500 animate-spin" />
+                      <span className="text-sm text-slate-600">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 text-slate-500" />
+                      <span className="text-sm text-slate-600">Click to upload an image</span>
+                    </>
+                  )}
+                </label>
+
+                <div className="relative flex items-center gap-2">
+                  <div className="flex-1 h-px bg-slate-200"></div>
+                  <span className="text-xs text-slate-400">or add URL</span>
+                  <div className="flex-1 h-px bg-slate-200"></div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="Enter image URL (e.g., https://...)"
+                    data-testid="input-image-url"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addImageUrl}
+                    disabled={formData.images.length >= 5}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               {formData.images.length > 0 && (
@@ -396,6 +473,11 @@ const NewPropertyPage = () => {
                       >
                         <X className="w-3 h-3 text-red-500" />
                       </button>
+                      {index === 0 && (
+                        <span className="absolute bottom-2 left-2 px-2 py-1 bg-rose-500 text-white text-xs rounded-md">
+                          Cover
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

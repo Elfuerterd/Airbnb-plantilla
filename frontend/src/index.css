@@ -182,6 +182,17 @@ code {
     background-color: var(--brand-primary-hover) !important;
 }
 
+.rdp-day_disabled {
+    opacity: 0.3;
+    text-decoration: line-through;
+    background-color: #FEE2E2 !important;
+    color: #991B1B !important;
+}
+
+.rdp-day_range_middle {
+    background-color: rgba(244, 63, 94, 0.1) !important;
+}
+
 /* Debug wrapper fix */
 @layer base {
     [data-debug-wrapper="true"] {

@@ -42,7 +42,7 @@ const LoginPage = () => {
               <Home className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              StayBnB
+              FaceYouFace
             </span>
           </Link>
 
@@ -162,7 +162,7 @@ const LoginPage = () => {
         <div className="absolute bottom-12 left-12 right-12">
           <blockquote className="text-white">
             <p className="text-2xl font-medium mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              "StayBnB helped me find the perfect vacation home for my family. The experience was seamless!"
+              "FaceYouFace helped me find the perfect vacation home for my family. The experience was seamless!"
             </p>
             <footer className="text-white/80">
               — Maria Garcia, Guest
