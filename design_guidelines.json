@@ -1,0 +1,109 @@
+{
+  "theme": "LIGHT",
+  "archetype": "1 (Organic & Earthy) / 4 (Swiss Minimalist)",
+  "emotional_tone": "Inviting, trustworthy, modern, clean, aspirational.",
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "body": "Manrope, sans-serif"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-semibold",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-slate-500",
+      "overline": "text-xs font-bold uppercase tracking-[0.2em] text-slate-500"
+    }
+  },
+  "colors": {
+    "background": {
+      "default": "#FFFFFF",
+      "muted": "#F7F7F9"
+    },
+    "brand": {
+      "primary": "#F43F5E", 
+      "primary_hover": "#E11D48",
+      "secondary": "#0F172A"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "inverse": "#FFFFFF"
+    },
+    "border": {
+      "default": "#E2E8F0",
+      "focus": "#F43F5E"
+    }
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "p-4, p-6, p-8, p-12, p-16, p-24",
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "grids": {
+      "property_cards": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6",
+      "property_gallery_bento": "grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-2 rounded-2xl overflow-hidden",
+      "dashboard": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+    }
+  },
+  "surfaces_and_components": {
+    "header": "Sticky Crystal Glass: backdrop-blur-xl bg-white/80 border-b border-border z-50",
+    "property_card": "group flex flex-col gap-3 cursor-pointer",
+    "property_image_wrapper": "relative aspect-[4/3] overflow-hidden rounded-xl",
+    "buttons": {
+      "primary": "bg-rose-500 hover:bg-rose-600 text-white rounded-lg px-6 py-3 font-medium transition-colors",
+      "secondary": "bg-white border border-slate-200 hover:border-slate-800 text-slate-900 rounded-lg px-6 py-3 font-medium transition-colors",
+      "pill_filter": "rounded-full border border-slate-200 hover:border-slate-800 px-4 py-2 text-sm font-medium transition-all"
+    },
+    "inputs": "rounded-lg border-slate-200 focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+  },
+  "animations": {
+    "hover": "transition-all duration-300 ease-in-out",
+    "image_scale": "group-hover:scale-105 transition-transform duration-500 ease-out",
+    "page_transition": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+  },
+  "iconography": {
+    "library": "lucide-react",
+    "style": "Clean, line-based, consistent stroke width (1.5px to 2px)"
+  },
+  "media": {
+    "images": [
+      {
+        "category": "hero_or_featured",
+        "url": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/78f5db4031d9acce99ee3acf6f974d5d076abdf97218a4d4be0b8746a786a33a.png",
+        "description": "High-end Mediterranean villa for hero section or premium listing."
+      },
+      {
+        "category": "featured_property_1",
+        "url": "https://static.prod-images.emergentagent.com/jobs/0dccd7bd-a53a-4539-920a-e903c0f78411/images/e9ec01df7337decb3638037102006498af09b6e1edce90d32529e9c8441077d4.png",
+        "description": "Scandinavian treehouse for unique stays section."
+      },
+      {
+        "category": "property_interior",
+        "url": "https://images.unsplash.com/photo-1768578927442-24a68408c0c7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBjb3p5JTIwY2FiaW4lMjBpbnRlcmlvciUyMGFyY2hpdGVjdHVyZXxlbnwwfHx8fDE3NzYyNzY4Nzd8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Modern cozy cabin interior."
+      },
+      {
+        "category": "property_exterior",
+        "url": "https://images.unsplash.com/photo-1759372945658-1e9f56e751bd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwzfHxsdXh1cnklMjBiZWFjaCUyMHZpbGxhJTIwZXh0ZXJpb3J8ZW58MHx8fHwxNzc2Mjc2ODc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Tropical beach villa exterior."
+      },
+      {
+        "category": "user_avatar",
+        "url": "https://images.unsplash.com/photo-1622646771382-1c9c090d3c37?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwzfHxoYXBweSUyMHRyYXZlbGVyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc2Mjc2ODc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Smiling user portrait for reviews or host profile."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use Outfit for all headings and Manrope for body text.",
+    "Property listing cards must NOT use Shadcn Card by default. Build them with pure HTML/Tailwind: a rounded-xl image wrapper (aspect-[4/3]) and clean text below. Images must scale on hover (`group-hover:scale-105`) while the wrapper stays `overflow-hidden`.",
+    "Implement a 'Bento' style image gallery for the Property Details Page: 1 large image on the left (col-span-1 md:col-span-2 row-span-2), and 4 smaller images on the right.",
+    "Use Lucide-react for all icons (Heart, Star, MapPin, Search).",
+    "The search bar should be a prominent, pill-shaped container with divided sections (Where, When, Who) and a primary brand color search button, utilizing glassmorphism or a clean white drop-shadow.",
+    "Ensure all interactive elements have data-testid attributes.",
+    "For the booking calendar, use Shadcn Calendar but customize it to look seamless with the brand.",
+    "Do NOT use 'Inter' font anywhere.",
+    "Keep borders very subtle (border-slate-200) and favor whitespace over structural lines."
+  ]
+}
