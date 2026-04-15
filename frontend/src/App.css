@@ -1,34 +1,239 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+/* App specific styles */
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+.App {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
 }
 
-.App-link {
-    color: #61dafb;
+/* Hero section */
+.hero-gradient {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.05) 0%, rgba(255, 255, 255, 0) 50%);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
+/* Property grid */
+.property-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .property-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    to {
-        transform: rotate(360deg);
+}
+
+@media (min-width: 1024px) {
+    .property-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1280px) {
+    .property-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* Bento gallery grid */
+.bento-gallery {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 200px);
+    gap: 0.5rem;
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.bento-gallery .main-image {
+    grid-column: span 2;
+    grid-row: span 2;
+}
+
+.bento-gallery .sub-image {
+    grid-column: span 1;
+    grid-row: span 1;
+}
+
+@media (max-width: 768px) {
+    .bento-gallery {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+    
+    .bento-gallery .main-image {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+    
+    .bento-gallery .sub-image {
+        display: none;
+    }
+}
+
+/* Search dropdown */
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.5rem;
+    background: white;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+    overflow: hidden;
+}
+
+/* Category pills scroll */
+.category-scroll {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.category-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Loading skeleton */
+.skeleton {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Toast notification */
+.toast-success {
+    background-color: #10B981 !important;
+}
+
+.toast-error {
+    background-color: #EF4444 !important;
+}
+
+/* Modal overlay */
+.modal-overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+/* Price highlight */
+.price-highlight {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+}
+
+/* Rating display */
+.rating-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* User avatar */
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Card hover effect */
+.card-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* Date picker range */
+.date-range-selected {
+    background-color: rgba(244, 63, 94, 0.1);
+}
+
+/* Booking summary card */
+.booking-summary {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    position: sticky;
+    top: 6rem;
+}
+
+/* Dashboard stats card */
+.stats-card {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    border-color: #F43F5E;
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.1);
+}
+
+/* Payment method selector */
+.payment-method {
+    border: 2px solid #E2E8F0;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.payment-method:hover {
+    border-color: #CBD5E1;
+}
+
+.payment-method.selected {
+    border-color: #F43F5E;
+    background-color: rgba(244, 63, 94, 0.05);
+}
+
+/* Review card */
+.review-card {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.review-card:last-child {
+    border-bottom: none;
+}
+
+/* Responsive container */
+.container-app {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+    .container-app {
+        padding: 0 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .container-app {
+        padding: 0 2rem;
     }
 }

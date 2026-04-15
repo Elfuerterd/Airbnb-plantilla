@@ -1,51 +1,115 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React from 'react';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Toaster } from './components/ui/sonner';
+import '@/App.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Pages
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import AuthCallback from './pages/AuthCallback';
+import PropertyDetailsPage from './pages/PropertyDetailsPage';
+import SearchPage from './pages/SearchPage';
+import BookingsPage from './pages/BookingsPage';
+import FavoritesPage from './pages/FavoritesPage';
+import PaymentPage from './pages/PaymentPage';
+import BookingSuccessPage from './pages/BookingSuccessPage';
+import HostDashboardPage from './pages/HostDashboardPage';
+import NewPropertyPage from './pages/NewPropertyPage';
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
+// App Router with OAuth Callback Detection
+function AppRouter() {
+  const location = useLocation();
+
+  // Check URL fragment for session_id (OAuth callback) - synchronous check before routes
+  if (location.hash?.includes('session_id=')) {
+    return <AuthCallback />;
+  }
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/property/:id" element={<PropertyDetailsPage />} />
+
+      {/* Protected Routes - Guest */}
+      <Route path="/bookings" element={
+        <ProtectedRoute>
+          <BookingsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/favorites" element={
+        <ProtectedRoute>
+          <FavoritesPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/booking/:bookingId/payment" element={
+        <ProtectedRoute>
+          <PaymentPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/booking-success" element={
+        <ProtectedRoute>
+          <BookingSuccessPage />
+        </ProtectedRoute>
+      } />
+
+      {/* Protected Routes - Host */}
+      <Route path="/host/dashboard" element={
+        <ProtectedRoute>
+          <HostDashboardPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/host/properties" element={
+        <ProtectedRoute>
+          <HostDashboardPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/host/properties/new" element={
+        <ProtectedRoute>
+          <NewPropertyPage />
+        </ProtectedRoute>
+      } />
+
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
-};
+}
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <AuthProvider>
+          <AppRouter />
+          <Toaster position="top-right" richColors />
+        </AuthProvider>
       </BrowserRouter>
     </div>
   );
