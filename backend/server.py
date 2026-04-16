@@ -1,11 +1,13 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, Body, File, UploadFile, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Query, Body, File, UploadFile, BackgroundTasks, WebSocket, WebSocketDisconnect
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import json
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict, Any
@@ -52,6 +54,41 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'noreply@faceyouface.com')
 
 app = FastAPI(title="FaceYouFace API")
 api_router = APIRouter(prefix="/api")
+
+# ============== WEBSOCKET CONNECTION MANAGER ==============
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, List[WebSocket]] = {}
+    
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
+        logger.info(f"WebSocket connected for user {user_id}")
+    
+    def disconnect(self, websocket: WebSocket, user_id: str):
+        if user_id in self.active_connections:
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
+        logger.info(f"WebSocket disconnected for user {user_id}")
+    
+    async def send_personal_message(self, message: dict, user_id: str):
+        if user_id in self.active_connections:
+            for connection in self.active_connections[user_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception as e:
+                    logger.error(f"Error sending message: {e}")
+    
+    async def broadcast_to_users(self, message: dict, user_ids: List[str]):
+        for user_id in user_ids:
+            await self.send_personal_message(message, user_id)
+
+manager = ConnectionManager()
 
 # ============== STORAGE HELPERS ==============
 
@@ -860,6 +897,19 @@ async def send_message(message_data: MessageCreate, user: dict = Depends(get_cur
         }}
     )
     
+    # Send real-time notification via WebSocket
+    await manager.send_personal_message({
+        "type": "new_message",
+        "message": {
+            "id": message_id,
+            "conversation_id": conversation_id,
+            "sender_id": user["id"],
+            "sender_name": user["name"],
+            "content": message_data.content,
+            "created_at": message_doc["created_at"]
+        }
+    }, message_data.recipient_id)
+    
     message_doc.pop("_id", None)
     return message_doc
 
@@ -1251,12 +1301,193 @@ async def get_host_stats(user: dict = Depends(get_current_user)):
     ).to_list(1000)
     total_earnings = sum(b["total"] for b in paid_bookings)
     
+    # Calculate pending payouts
+    pending_payouts = await db.host_payouts.find(
+        {"host_id": user["id"], "status": "pending"},
+        {"_id": 0, "amount": 1}
+    ).to_list(1000)
+    pending_payout_amount = sum(p["amount"] for p in pending_payouts)
+    
+    # Calculate paid out
+    paid_payouts = await db.host_payouts.find(
+        {"host_id": user["id"], "status": "paid"},
+        {"_id": 0, "amount": 1}
+    ).to_list(1000)
+    total_paid_out = sum(p["amount"] for p in paid_payouts)
+    
     return {
         "properties": properties,
         "total_bookings": total_bookings,
         "confirmed_bookings": confirmed_bookings,
-        "total_earnings": total_earnings
+        "total_earnings": total_earnings,
+        "pending_payout": pending_payout_amount,
+        "total_paid_out": total_paid_out,
+        "available_balance": total_earnings * 0.88 - total_paid_out  # 12% platform fee
     }
+
+# ============== HOST PAYOUT ROUTES ==============
+
+@api_router.get("/host/payouts")
+async def get_host_payouts(user: dict = Depends(get_current_user)):
+    if user["role"] != "host":
+        raise HTTPException(status_code=403, detail="Only hosts can access this")
+    
+    payouts = await db.host_payouts.find(
+        {"host_id": user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return payouts
+
+@api_router.post("/host/payouts/request")
+async def request_payout(user: dict = Depends(get_current_user)):
+    if user["role"] != "host":
+        raise HTTPException(status_code=403, detail="Only hosts can access this")
+    
+    # Calculate available balance
+    paid_bookings = await db.bookings.find(
+        {"host_id": user["id"], "payment_status": "paid", "status": "completed"},
+        {"_id": 0, "total": 1, "id": 1}
+    ).to_list(1000)
+    total_earnings = sum(b["total"] for b in paid_bookings)
+    
+    # Get already paid out
+    paid_payouts = await db.host_payouts.find(
+        {"host_id": user["id"], "status": {"$in": ["pending", "paid"]}},
+        {"_id": 0, "amount": 1}
+    ).to_list(1000)
+    total_paid = sum(p["amount"] for p in paid_payouts)
+    
+    available = total_earnings * 0.88 - total_paid  # 12% platform fee
+    
+    if available < 50:  # Minimum payout $50
+        raise HTTPException(status_code=400, detail="Minimum payout amount is $50")
+    
+    payout_id = f"payout_{uuid.uuid4().hex[:12]}"
+    payout_doc = {
+        "id": payout_id,
+        "host_id": user["id"],
+        "amount": available,
+        "status": "pending",
+        "payment_method": "bank_transfer",  # Default
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None
+    }
+    await db.host_payouts.insert_one(payout_doc)
+    
+    # Send notification
+    await create_notification(
+        user["id"],
+        "payout_requested",
+        f"Payout request of ${available:.2f} has been submitted",
+        {"payout_id": payout_id, "amount": available}
+    )
+    
+    payout_doc.pop("_id", None)
+    return payout_doc
+
+# ============== NOTIFICATION ROUTES ==============
+
+async def create_notification(user_id: str, notification_type: str, message: str, data: dict = None):
+    """Create a notification and send via WebSocket if connected"""
+    notification_id = f"notif_{uuid.uuid4().hex[:12]}"
+    notification_doc = {
+        "id": notification_id,
+        "user_id": user_id,
+        "type": notification_type,
+        "message": message,
+        "data": data or {},
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification_doc)
+    
+    # Send via WebSocket
+    await manager.send_personal_message({
+        "type": "notification",
+        "notification": {
+            "id": notification_id,
+            "type": notification_type,
+            "message": message,
+            "data": data or {},
+            "created_at": notification_doc["created_at"]
+        }
+    }, user_id)
+    
+    return notification_doc
+
+@api_router.get("/notifications")
+async def get_notifications(user: dict = Depends(get_current_user)):
+    notifications = await db.notifications.find(
+        {"user_id": user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(50).to_list(50)
+    return notifications
+
+@api_router.get("/notifications/unread-count")
+async def get_unread_notifications_count(user: dict = Depends(get_current_user)):
+    count = await db.notifications.count_documents({
+        "user_id": user["id"],
+        "read": False
+    })
+    return {"count": count}
+
+@api_router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": user["id"]},
+        {"$set": {"read": True}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification marked as read"}
+
+@api_router.post("/notifications/mark-all-read")
+async def mark_all_notifications_read(user: dict = Depends(get_current_user)):
+    await db.notifications.update_many(
+        {"user_id": user["id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+# ============== ENHANCED REVIEW ROUTES ==============
+
+@api_router.get("/bookings/{booking_id}/can-review")
+async def can_review_booking(booking_id: str, user: dict = Depends(get_current_user)):
+    """Check if user can review a specific booking"""
+    booking = await db.bookings.find_one({"id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking["guest_id"] != user["id"]:
+        return {"can_review": False, "reason": "Not your booking"}
+    if booking["status"] != "completed":
+        return {"can_review": False, "reason": "Booking not completed"}
+    
+    existing_review = await db.reviews.find_one({"booking_id": booking_id})
+    if existing_review:
+        return {"can_review": False, "reason": "Already reviewed", "review_id": existing_review["id"]}
+    
+    return {"can_review": True, "booking": booking}
+
+@api_router.get("/reviews/pending")
+async def get_pending_reviews(user: dict = Depends(get_current_user)):
+    """Get completed bookings that haven't been reviewed yet"""
+    # Get completed bookings
+    completed_bookings = await db.bookings.find(
+        {"guest_id": user["id"], "status": "completed"},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Get existing reviews
+    booking_ids = [b["id"] for b in completed_bookings]
+    existing_reviews = await db.reviews.find(
+        {"booking_id": {"$in": booking_ids}},
+        {"_id": 0, "booking_id": 1}
+    ).to_list(100)
+    reviewed_booking_ids = {r["booking_id"] for r in existing_reviews}
+    
+    # Filter to get pending reviews
+    pending = [b for b in completed_bookings if b["id"] not in reviewed_booking_ids]
+    return pending
 
 # ============== SEED DATA ==============
 
@@ -1399,6 +1630,7 @@ async def startup():
     await db.bookings.create_index("guest_id")
     await db.bookings.create_index("host_id")
     await db.reviews.create_index("property_id")
+    await db.reviews.create_index("booking_id")
     await db.favorites.create_index([("user_id", 1), ("property_id", 1)], unique=True)
     await db.login_attempts.create_index("identifier")
     await db.payment_transactions.create_index("session_id")
@@ -1407,6 +1639,8 @@ async def startup():
     await db.messages.create_index([("recipient_id", 1), ("read", 1)])
     await db.conversations.create_index("participants")
     await db.files.create_index("id", unique=True)
+    await db.host_payouts.create_index("host_id")
+    await db.notifications.create_index([("user_id", 1), ("read", 1)])
     
     await seed_admin()
     
@@ -1428,6 +1662,32 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown():
     client.close()
+
+# ============== WEBSOCKET ENDPOINT ==============
+
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
+    # Verify token from query param
+    token = websocket.query_params.get("token")
+    if token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            if payload.get("sub") != user_id:
+                await websocket.close(code=4001)
+                return
+        except jwt.InvalidTokenError:
+            await websocket.close(code=4001)
+            return
+    
+    await manager.connect(websocket, user_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Handle ping/pong for keep-alive
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
 
 # Include router
 app.include_router(api_router)

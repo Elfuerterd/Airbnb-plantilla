@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { Home, Calendar, DollarSign, TrendingUp, Plus, ChevronRight, CheckCircle, Clock, Users } from 'lucide-react';
+import { Home, Calendar, DollarSign, TrendingUp, Plus, ChevronRight, CheckCircle, Clock, Users, Edit, Wallet, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import { Button } from '../components/ui/button';
@@ -95,12 +95,20 @@ const HostDashboardPage = () => {
             </h1>
             <p className="text-slate-600 mt-1">Welcome back, {user?.name}!</p>
           </div>
-          <Link to="/host/properties/new">
-            <Button className="bg-rose-500 hover:bg-rose-600" data-testid="add-property-btn">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Property
-            </Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link to="/host/payouts">
+              <Button variant="outline" data-testid="payouts-btn">
+                <Wallet className="w-4 h-4 mr-2" />
+                Payouts
+              </Button>
+            </Link>
+            <Link to="/host/properties/new">
+              <Button className="bg-rose-500 hover:bg-rose-600" data-testid="add-property-btn">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Property
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
@@ -151,6 +159,9 @@ const HostDashboardPage = () => {
             <p className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
               ${(stats?.total_earnings || 0).toFixed(2)}
             </p>
+            <Link to="/host/payouts" className="text-xs text-rose-500 hover:text-rose-600 mt-1 block">
+              Available: ${(stats?.available_balance || 0).toFixed(2)} →
+            </Link>
           </div>
         </div>
 
